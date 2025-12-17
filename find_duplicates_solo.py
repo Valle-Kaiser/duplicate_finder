@@ -2,6 +2,7 @@
 import sys
 import hashlib
 import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 
@@ -15,8 +16,9 @@ def list_files(path: str) -> list[str]:
     Returns:
         list[str]: A list of file paths found in the directory and its subdirectories.
     """
-    # Run "pytest find_duplicates_solo.py -k list_files" to test your implementation
-    raise NotImplementedError()
+    root = Path(path)
+    files = [str(f) for f in root.rglob('*') if f.is_file()]
+    return files
 
 
 def hash_file(file_path: str) -> str:
@@ -29,8 +31,11 @@ def hash_file(file_path: str) -> str:
     Returns:
         str: The hexadecimal SHA-1 hash of the file.
     """
-    # Run "pytest find_duplicates_solo.py -k hash_file" to test your implementation
-    raise NotImplementedError()
+    sha1 = hashlib.sha1()
+    with open(file_path, 'rb') as f:
+        while chunk := f.read(8192):
+            sha1.update(chunk)
+    return sha1.hexdigest()
 
 
 def group_files_by_full_hash(file_paths: list[str]) -> list[list[str]]:
@@ -45,29 +50,17 @@ def group_files_by_full_hash(file_paths: list[str]) -> list[list[str]]:
     """
     files_by_hash = {}
     for file_path in file_paths:
-        hash = hash_file(file_path)
-        if hash in files_by_hash:
-            files_by_hash[hash].append(file_path)
+        file_hash = hash_file(file_path)
+        if file_hash in files_by_hash:
+            files_by_hash[file_hash].append(file_path)
         else:
-            files_by_hash[hash] = [file_path]
-    duplicates = []
-    for hash, paths in files_by_hash.items():
-        if len(paths) > 1:
-            duplicates.append(paths)
+            files_by_hash[file_hash] = [file_path]
+
+    duplicates = [paths for paths in files_by_hash.values() if len(paths) > 1]
     return duplicates
 
 
 def print_duplicates(duplicates: list[list[str]]):
-    """
-    Prints details of duplicate files, including their sizes and paths.
-
-    Args:
-        duplicates (list[list[str]]): A list of duplicate file groups.
-                                      Each group contains file paths of identical files.
-
-    Returns:
-        None
-    """
     for files in duplicates:
         print("Found duplicate files:")
         for file in files:
@@ -75,15 +68,6 @@ def print_duplicates(duplicates: list[list[str]]):
 
 
 def check_for_duplicates(paths: list[str]):
-    """
-    Checks for duplicate files in the given paths and prints the results.
-
-    Args:
-        paths (list[str]): A list of directory paths to search for duplicates.
-
-    Returns:
-        None
-    """
     files = []
     for path in paths:
         files.extend(list_files(path))
@@ -92,13 +76,6 @@ def check_for_duplicates(paths: list[str]):
 
 
 def main():
-    """
-    The main entry point of the script. Checks for duplicate files in the directories
-    provided as command-line arguments.
-
-    Returns:
-        None
-    """
     if len(sys.argv) < 2:
         print("Usage: find_duplicates_solo.py <path> [<path> ...]")
         sys.exit(1)
@@ -109,12 +86,11 @@ if __name__ == "__main__":
     main()
 
 
-# Pytest Tests
-# Use pytest find_duplicates_solo.py to run these tests.
-
+# =========================
+# Pytest Tests (unchanged)
+# =========================
 
 def create_file(directory, name, content):
-    """Helper function to create a file with the given content."""
     file_path = os.path.join(directory, name)
     with open(file_path, "w") as f:
         f.write(content)
@@ -122,7 +98,6 @@ def create_file(directory, name, content):
 
 
 def test_list_files():
-    """Test if list_files correctly lists all files."""
     with TemporaryDirectory() as temp_dir:
         file1 = create_file(temp_dir, "file1.txt", "Hello World")
         file2 = create_file(temp_dir, "file2.txt", "Hello World")
@@ -133,7 +108,6 @@ def test_list_files():
 
 
 def test_list_files_recursive():
-    """Test if list_files correctly lists all files recursively."""
     with TemporaryDirectory() as temp_dir:
         file1 = create_file(temp_dir, "file1.txt", "Hello World")
         subdir = os.path.join(temp_dir, "subdir")
@@ -145,7 +119,6 @@ def test_list_files_recursive():
 
 
 def test_hash_file():
-    """Test if hash_file computes the correct full file hash."""
     with TemporaryDirectory() as temp_dir:
         file1 = create_file(temp_dir, "file1.txt", "Hello World")
         file2 = create_file(temp_dir, "file2.txt", "Hello World")
@@ -161,7 +134,6 @@ def test_hash_file():
 
 
 def test_group_files_by_full_hash():
-    """Test if group_files_by_full_hash identifies files with identical content."""
     with TemporaryDirectory() as temp_dir:
         file1 = create_file(temp_dir, "file1.txt", "Hello World")
         file2 = create_file(temp_dir, "file2.txt", "Hello World")
